@@ -79,6 +79,6 @@ func (s *Server) handleConn(conn net.Conn) {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 		return
 	}
-	res := &Response{conn}
+	res := &Response{conn: conn}
 	s.routes[idx].handler(r, res)
 }

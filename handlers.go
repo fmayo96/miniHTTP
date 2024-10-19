@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net"
 )
@@ -17,6 +18,18 @@ const (
 	DELETE HttpMethod = "DELETE"
 )
 
+type HttpStatusCode int
+
+const (
+	Ok                  HttpStatusCode = 200
+	Created             HttpStatusCode = 201
+	NoContent           HttpStatusCode = 204
+	BadRequest          HttpStatusCode = 400
+	Forbidden           HttpStatusCode = 403
+	NotFound            HttpStatusCode = 404
+	InternalServerError HttpStatusCode = 500
+)
+
 type Route struct {
 	method  HttpMethod
 	path    string
@@ -29,15 +42,42 @@ type Request struct {
 }
 
 type Response struct {
-	conn net.Conn
+	conn    net.Conn
+	Status  HttpStatusCode
+	Headers []string
+	Body    string
+	buf     []byte
 }
 
-func (res *Response) Write(message string) {
+func (res *Response) SetHeader(key, value string) {
+	res.Headers = append(res.Headers, key+": "+value+"\r\n")
+}
+
+func (res *Response) SetStatus(status HttpStatusCode) {
+	res.Status = status
+}
+
+func (res *Response) Send(message string) {
 	log.Println("Writing started")
 	responseString := "HTTP/1.1 200 Ok\r\nContent-Type: text/html\r\n\r\n" + message
-	bytesWritten, err := res.conn.Write([]byte(responseString))
+	_, err := res.conn.Write([]byte(responseString))
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	log.Println(bytesWritten)
+}
+
+func (res *Response) Write(p []byte) (int, error) {
+	res.buf = append(res.buf, p...)
+	return len(p), nil
+}
+
+func (res *Response) Json(v interface{}) {
+	res.SetHeader("Content-Type", "application/json")
+	res.Write([]byte("HTTP/1.1 200 Ok\r\n"))
+	for _, header := range res.Headers {
+		res.Write([]byte(header))
+	}
+	res.Write([]byte("\r\n"))
+	json.NewEncoder(res).Encode(v)
+	res.conn.Write(res.buf)
 }
