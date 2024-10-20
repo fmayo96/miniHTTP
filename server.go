@@ -6,7 +6,6 @@ package main
 import (
 	"log"
 	"net"
-	"strings"
 )
 
 type Server struct {
@@ -23,7 +22,6 @@ func (s *Server) Start() {
 	if err != nil {
 		log.Println(err.Error())
 	}
-	log.Printf("Server listening on http://localhost:%d\n/", s.Port)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -69,16 +67,13 @@ func (s *Server) handleConn(conn net.Conn) {
 		log.Println("Client disconnected")
 		return
 	}
-	parseReq := strings.Split(string(buf), " ")[:2]
-	r := Request{Method: HttpMethod(parseReq[0]), Path: parseReq[1]}
-	log.Println("request method", r.Method)
-	log.Println("request path", r.Path)
-	idx, err := findRoute(r, s.routes)
+	req := ParseRequest(buf)
+	idx, err := findRoute(req, s.routes)
 	if err != nil {
 		log.Println(err.Error())
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 		return
 	}
-	res := &Response{conn: conn}
-	s.routes[idx].handler(r, res)
+	res := &Response{conn: conn, Status: Ok}
+	s.routes[idx].handler(req, res)
 }

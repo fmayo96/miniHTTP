@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net"
+	"strconv"
 )
 
 type HandlerFunc func(req Request, res *Response)
@@ -37,8 +38,10 @@ type Route struct {
 }
 
 type Request struct {
-	Method HttpMethod
-	Path   string
+	Method  HttpMethod
+	Path    string
+	Headers []string
+	Body    []byte
 }
 
 type Response struct {
@@ -57,10 +60,13 @@ func (res *Response) SetStatus(status HttpStatusCode) {
 	res.Status = status
 }
 
-func (res *Response) Send(message string) {
-	log.Println("Writing started")
-	responseString := "HTTP/1.1 200 Ok\r\nContent-Type: text/html\r\n\r\n" + message
-	_, err := res.conn.Write([]byte(responseString))
+func (res *Response) Send(message ...string) {
+	res.Write([]byte("HTTP/1.1 "))
+	res.Write([]byte(strconv.Itoa(int(res.Status)) + "\r\n"))
+	for _, m := range message {
+		res.Write([]byte("\r\n" + m))
+	}
+	_, err := res.conn.Write(res.buf)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -72,8 +78,9 @@ func (res *Response) Write(p []byte) (int, error) {
 }
 
 func (res *Response) Json(v interface{}) {
+	res.Write([]byte("HTTP/1.1 "))
+	res.Write([]byte(strconv.Itoa(int(res.Status)) + "\r\n"))
 	res.SetHeader("Content-Type", "application/json")
-	res.Write([]byte("HTTP/1.1 200 Ok\r\n"))
 	for _, header := range res.Headers {
 		res.Write([]byte(header))
 	}
