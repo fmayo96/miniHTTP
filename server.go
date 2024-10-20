@@ -1,7 +1,7 @@
 // Defines the Server and all it's functionalities
 // including the methods for creating new routes
 // and starting the server
-package main
+package minihttp
 
 import (
 	"log"
