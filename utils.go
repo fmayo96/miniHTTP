@@ -28,6 +28,7 @@ func ParseRequest(buf []byte) Request {
 }
 
 func trimBytes(buf []byte) []byte {
+	// Removes trailing bytes from request
 	lastIdx := len(buf) - 1
 	for i := len(buf) - 1; i > 0; i-- {
 		if buf[i] != 0 {
